@@ -21,10 +21,14 @@ COPY turbo.json tsconfig.json langgraph.json ./
 COPY apps/ ./apps/
 COPY packages/ ./packages/
 
-# Install all dependencies
+# Install all dependencies (including dev dependencies needed for build)
 RUN yarn install --immutable
 
-# Build all packages (Turbo handles the correct build order)
+# Build all packages using Turbo orchestration
+# Turbo automatically handles the correct build order:
+# 1. packages/shared (TypeScript compilation to dist/)
+# 2. apps/open-swe (TypeScript compilation to dist/)
+# 3. apps/web (Next.js build to .next/)
 # This ensures packages/shared is built before other packages consume it
 RUN yarn build
 
@@ -125,3 +129,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 # Start both services
 CMD ["/app/start.sh"]
+
