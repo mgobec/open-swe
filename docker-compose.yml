@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  open-swe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-swe
+    restart: unless-stopped
+    
+    # Port mappings for both services
+    ports:
+      - "2024:2024"  # LangGraph agent service
+      - "3000:3000"  # Next.js web interface
+    
+    # Environment variables for Open-SWE configuration
+    environment:
+      # Production environment
+      - NODE_ENV=production
+      
+      # Service ports and URLs
+      - PORT=2024
+      - LANGGRAPH_API_URL=http://localhost:2024
+      - NEXT_PUBLIC_API_URL=http://localhost:3000/api
+      - OPEN_SWE_APP_URL=http://localhost:3000
+      
+      # LangSmith tracing (optional)
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-open-swe-docker}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_TEST_TRACKING=${LANGCHAIN_TEST_TRACKING:-false}
+      
+      # LLM Provider Keys (required)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      
+      # Infrastructure
+      - DAYTONA_API_KEY=${DAYTONA_API_KEY:-}
+      
+      # Tools
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY:-}
+      
+      # GitHub App Configuration (required)
+      - GITHUB_APP_NAME=${GITHUB_APP_NAME}
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_APP_PRIVATE_KEY=${GITHUB_APP_PRIVATE_KEY}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - NEXT_PUBLIC_GITHUB_APP_CLIENT_ID=${NEXT_PUBLIC_GITHUB_APP_CLIENT_ID}
+      - GITHUB_APP_CLIENT_SECRET=${GITHUB_APP_CLIENT_SECRET}
+      - GITHUB_APP_REDIRECT_URI=${GITHUB_APP_REDIRECT_URI:-http://localhost:3000/api/auth/github/callback}
+      
+      # Security
+      - SECRETS_ENCRYPTION_KEY=${SECRETS_ENCRYPTION_KEY}
+      
+      # Optional configuration
+      - SKIP_CI_UNTIL_LAST_COMMIT=${SKIP_CI_UNTIL_LAST_COMMIT:-true}
+      - RESTRICT_TO_LANGCHAIN_AUTH=${RESTRICT_TO_LANGCHAIN_AUTH:-false}
+      - NEXT_PUBLIC_RESTRICT_TO_LANGCHAIN_AUTH=${NEXT_PUBLIC_RESTRICT_TO_LANGCHAIN_AUTH:-false}
+    
+    # Volume mounts for configuration and data persistence
+    volumes:
+      # Mount environment file if it exists
+      - ./.env:/app/.env:ro
+      # Mount for persistent data (optional)
+      - open-swe-data:/app/data
+      # Mount for logs (optional)
+      - open-swe-logs:/app/logs
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health", "||", "curl", "-f", "http://localhost:2024/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Named volumes for data persistence
+volumes:
+  open-swe-data:
+    driver: local
+  open-swe-logs:
+    driver: local
+
+# Networks (optional - uses default bridge network)
+networks:
+  default:
+    name: open-swe-network
