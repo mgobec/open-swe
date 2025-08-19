@@ -83,7 +83,7 @@ export OPEN_SWE_APP_URL=${OPEN_SWE_APP_URL:-http://localhost:3000}
 # Start LangGraph agent in background
 echo "Starting LangGraph agent on port $PORT..."
 cd /app/apps/open-swe
-yarn dev --no-browser --config ../../langgraph.json &
+npx langgraphjs up --config ../../langgraph.json --port $PORT &
 AGENT_PID=$!
 
 # Wait a moment for the agent to start
@@ -129,4 +129,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 # Start both services
 CMD ["/app/start.sh"]
+
 
